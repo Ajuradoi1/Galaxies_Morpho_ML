@@ -9,7 +9,7 @@ pd.set_option("display.max_rows", 500)
 pd.set_option("display.max_columns", 500)
 
 
-# Connect to the TAP service
+# Connect to the TAP service (from TOPCAT)
 tap = TapPlus(url="http://tap.roe.ac.uk/ssa")
 
 # ADQL query
