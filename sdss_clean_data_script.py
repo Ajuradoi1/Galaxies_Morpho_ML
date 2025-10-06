@@ -1,96 +1,110 @@
-import os
+
+#DATA RETRIEVAL
+
 import pandas as pd
-import matplotlib.pyplot as plt
-from astropy.visualization import ZScaleInterval, ImageNormalize, LinearStretch
-from astropy import units as u
-from astroquery.skyview import SkyView
-from astropy.io import fits
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
+from astroquery.utils.tap.core import TapPlus
 
-#path to clean data file
-csv_path = "/Users/elisacamilleri/Documents/Masters/Statistics and Data Analysis/Computational Work/SDSS_filtered_data.csv"
-df = pd.read_csv(csv_path)
 
-#create output directory if it doesn't exist
-out_dir = "images"
-os.makedirs(out_dir, exist_ok=True)
+pd.set_option("display.max_rows", 500)
+pd.set_option("display.max_columns", 500)
 
-#parameters
-zoom = 0.03  # degrees across width/height
-pixels = 500  # image pixels along each dimension
-N_images = 10  # how many images to download (set small for testing)
 
-def download_image(index, ra, dec, out_dir):
-    filename = os.path.join(out_dir, f"object_{index}.fits")
+# Connect to the TAP service
+tap = TapPlus(url="http://tap.roe.ac.uk/ssa")
+
+# ADQL query
+adql = """
+SELECT TOP 1000
+        z.*,
+        p.*
+FROM BestDR9.ZooSpec AS z
+JOIN BestDR7.PhotoObj AS p
+    ON p.objid = z.dr7objid
+"""
+
+# Run synchronously
+job = tap.launch_job(adql)
+results = job.get_results()
+df = results.to_pandas()
+
+
+# Safely convert numeric columns
+def safe_to_numeric(col):
     try:
-        # Query SkyView for DSS survey with specified size in degrees
-        images = SkyView.get_images(position=f"{ra} {dec}",
-                                    survey=['DSS'],
-                                    width=zoom * u.deg,
-                                    height=zoom * u.deg,
-                                    pixels=pixels)
-        if images:
-            hdu = images[0][0]
-            hdu.writeto(filename, overwrite=True)
-            print(f"[{index}] Downloaded image for RA: {ra}, Dec: {dec}")
-            return filename
-        else:
-            print(f"[{index}] No image found for RA: {ra}, Dec: {dec}")
-            return None
-    except Exception as e:
-        print(f"[{index}] Error downloading image for RA: {ra}, Dec: {dec}: {e}")
-        return None
+        return pd.to_numeric(col, errors="raise")
+    except Exception:
+        return col  # leave unchanged if it can't be fully parsed
 
-#parallel downloading
-def download_all_images(df, n_download, out_dir):
-    tasks = []
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        for i, row in df.iterrows():
-            if i >= n_download:
-                break
-            ra, dec = row['ra'], row['dec']
-            tasks.append(executor.submit(download_image, i, ra, dec, out_dir))
-        # Collect results
-        results = []
-        for future in as_completed(tasks):
-            result = future.result()
-            results.append(result)
-    return results
+df = df.apply(safe_to_numeric).set_index("dr7objid")
 
-downloaded_files = download_all_images(df, N_images, out_dir)
 
-#visualize downloaded images
-zscale = ZScaleInterval()
-for i in range(min(N_images, len(df))):
-    filepath = os.path.join(out_dir, f"object_{i}.fits")
-    if os.path.exists(filepath):
-        data = fits.getdata(filepath)
-        plt.figure()
-        plt.imshow(zscale(data), cmap="gray", origin='lower')
-        plt.title(f"Object {i}")
-        plt.colorbar()
-        plt.show()
-    else:
-        print(f"File not found for visualization: {filepath}")
 
-#display special cases for spiral and elliptical galaxy
-def plot_special_object(df, colname, out_dir, title, filename):
-    idx = df[colname].idxmax()
-    ra, dec = df.loc[idx, ['ra', 'dec']]
-    filepath = os.path.join(out_dir, filename)
-    download_image(idx, ra, dec, out_dir)
-    if os.path.exists(filepath):
-        data = fits.getdata(filepath)
-        vmin, vmax = zscale.get_limits(data)
-        norm = ImageNormalize(vmin=vmin, vmax=vmax, stretch=LinearStretch())
-        plt.figure()
-        plt.imshow(data, cmap="gray", origin='lower', norm=norm)
-        plt.title(title)
-        plt.colorbar()
-        plt.show()
-    else:
-        print(f"File not found: {filepath}")
+#DATA FILTERING
 
-plot_special_object(df, 'p_cs_debiased', out_dir, "Spiral Galaxy", "spiral_galaxy.fits")
-plot_special_object(df, 'p_el_debiased', out_dir, "Elliptical Galaxy", "elliptical_galaxy.fits")
+mask = (
+# correct magnitudes
+(df["modelMag_u"] > -30)
+& (df["modelMag_g"] > -30)
+& (df["modelMag_r"] > -30)
+& (df["modelMag_i"] > -30)
+& (df["modelMag_z"] > -30)
+&
+# reasonable errors
+(df["modelMagErr_u"] < 0.5)
+& (df["modelMagErr_g"] < 0.05)
+& (df["modelMagErr_r"] < 0.05)
+& (df["modelMagErr_i"] < 0.05)
+& (df["modelMagErr_z"] < 0.1)
+&
+# very certain about the classification
+((df["p_cs_debiased"] >= 0.9) | (df["p_el_debiased"] >= 0.9))
+&
+# medium size
+(df["petroR90_r"] * 2 * 1.5 / 0.4 < 64)
+& (df["petroR90_r"] * 2 / 0.4 > 20)
+)
+cols_to_keep = (
+[
+"specobjid",
+"objid",
+"ra",
+"dec",
+"p_el_debiased",
+"p_cs_debiased",
+"spiral",
+"elliptical",
+]
++ ["petroR50_r", "petroR90_r"]
++ [f"modelMag_{f}" for f in "ugriz"]
++ [f"extinction_{f}" for f in "ugriz"]
+)
+df_filtered = df[mask][cols_to_keep]
+df_filtered.head()
+
+
+#IMAGE CUTOUT
+
+import urllib
+from PIL import Image as PILImage
+import io
+
+
+
+IMAGE_PIXSCALE = 0.4 # arcsec/pixel
+IMAGE_SIZE_PX = 64
+IMAGE_WIDTH_PX = IMAGE_SIZE_PX
+IMAGE_HEIGHT_PX = IMAGE_SIZE_PX
+OBJECT_INDEX = 28 # which object from the filtered list to download
+URL = (
+"https://skyserver.sdss.org/DR19/SkyserverWS/ImgCutout/getjpeg?"
+"ra={ra}&dec={dec}&scale={scale}&width={width}&height={height}"
+)
+RA = df_filtered.iloc[OBJECT_INDEX]["ra"]
+DEC = df_filtered.iloc[OBJECT_INDEX]["dec"]
+url = URL.format(ra=RA, dec=DEC, scale=IMAGE_PIXSCALE,
+width=IMAGE_WIDTH_PX, height=IMAGE_HEIGHT_PX)
+response = urllib.request.urlopen(url)
+blob = response.read() # bytes of the image (JPEG)
+img = PILImage.open(io.BytesIO(blob))
+img.show()
+
