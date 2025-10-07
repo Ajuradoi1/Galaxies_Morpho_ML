@@ -3,13 +3,15 @@
 
 import pandas as pd
 from astroquery.utils.tap.core import TapPlus
+import socket
+socket.gethostbyname("skyserver.sdss.org")
+import random
 
 
 pd.set_option("display.max_rows", 500)
 pd.set_option("display.max_columns", 500)
 
-
-# Connect to the TAP service (from TOPCAT)
+# Connect to the TAP service (from TOPCAT) 
 tap = TapPlus(url="http://tap.roe.ac.uk/ssa")
 
 # ADQL query
@@ -26,7 +28,6 @@ JOIN BestDR7.PhotoObj AS p
 job = tap.launch_job(adql)
 results = job.get_results()
 df = results.to_pandas()
-
 
 # Safely convert numeric columns
 def safe_to_numeric(col):
@@ -82,19 +83,19 @@ df_filtered = df[mask][cols_to_keep]
 df_filtered.head()
 
 
+
 #IMAGE CUTOUT
 
 import urllib
 from PIL import Image as PILImage
 import io
 
-
-
 IMAGE_PIXSCALE = 0.4 # arcsec/pixel
 IMAGE_SIZE_PX = 64
 IMAGE_WIDTH_PX = IMAGE_SIZE_PX
 IMAGE_HEIGHT_PX = IMAGE_SIZE_PX
-OBJECT_INDEX = 28 # which object from the filtered list to download
+OBJECT_INDEX = random.randint(0, len(df_filtered) - 1) # which object from the filtered list to download
+
 URL = (
 "https://skyserver.sdss.org/DR19/SkyserverWS/ImgCutout/getjpeg?"
 "ra={ra}&dec={dec}&scale={scale}&width={width}&height={height}"
@@ -107,4 +108,5 @@ response = urllib.request.urlopen(url)
 blob = response.read() # bytes of the image (JPEG)
 img = PILImage.open(io.BytesIO(blob))
 img.show()
+
 
