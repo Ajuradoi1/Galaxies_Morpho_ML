@@ -1,4 +1,5 @@
 /images
 /Images 
 .vscode
-ZooSpecPhotoDR19_filtered.csv
+ZooSpecPhotoDR19_filtered.csv.gz
+ZooSpecPhotoDR19.csv.gz

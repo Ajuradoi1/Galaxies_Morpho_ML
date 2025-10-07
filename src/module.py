@@ -52,7 +52,7 @@ def Hips2Fits_access(
     return f"{HIPS_URL}?{urlencode(params)}"
 
 
-def save_images_to_TAR(TAR_path, contents):
+def save_images_to_TAR(TAR_path: str, contents):
     with (
         tarfile.open(TAR_path, "w") as tar
     ):  # The "w" is from "write". It creates a new TAR (eliminates if it already exists)
