@@ -3,8 +3,11 @@
 
 import pandas as pd
 from astroquery.utils.tap.core import TapPlus
+
+#server check
 import socket
 socket.gethostbyname("skyserver.sdss.org")
+
 import random
 
 
