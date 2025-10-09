@@ -1,0 +1,30 @@
+[project]
+name = "Galaxies_Morpho_ML"
+version = "0.1.0"
+description = "Galaxy Morphology Classification using Machine Learning"
+readme = "README.md"
+authors = [
+    { name = "Alex Jurado", email = "alexjurado1lopez@gmail.com" },
+    { name = "Elisa Camilleri", email = "Elisa.Camilleri@uab.cat" },
+    { name = "Noah Alberca", email = "noahlbergarci@gmail.com" }
+]
+requires-python = ">=3.9"
+
+dependencies = [
+    "Pillow",
+    "astroquery",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "requests",
+    "scikit-learn"
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

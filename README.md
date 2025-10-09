@@ -18,20 +18,27 @@ The workflow includes:
 
 ## Project Structure
 ```
-├── code.ipynb                 # Main Jupyter Notebook (data retrieval, analysis, ML)
+├── docs/
+│   └──  Galaxies_Morpho_ML_doc.pdf # Documentation of the module.py functions and the code.ipynb
 ├── src/
 │   └── module.py              # Custom helper functions (data cleaning, modeling, etc.)
+├── tests/
+│   └── tests.md               # Brief summary of test code
+│   └── test_file.py           # Test code using pytest
+├── .gitignore                 # Avoid commiting large files, config files
 ├── ZooSpecPhotoDR19.csv.gz    # (optional) Local cached dataset
 ├── README.md                  # Project documentation (this file)
-└── requirements.txt           # Python dependencies
+├── code.ipynb                 # Main Jupyter Notebook (data retrieval, analysis, ML)
+└── pyproject.toml             # Python dependencies
 ```
 
 ## Installation
 Clone the repository and install dependencies:
 ```bash
-git clone https://github.com/yourusername/galaxy-morphology-ml.git
-cd galaxy-morphology-ml
-pip install -r requirements.txt
+git clone https://github.com/Ajuradoi1/Galaxies_Morpho_ML.git
+cd Galaxies_Morpho_ML
+pip install pip-tools
+pip install .
 ```
 
 Alternatively, open the notebook directly in JupyterLab or VS Code and install missing libraries as needed.
@@ -59,7 +66,7 @@ The project mainly uses:
 - seaborn
 - tqdm
 
-(See requirements.txt for full list.)
+(See pyproject.toml for full list.)
 
 ## Results
 The notebook outputs:
