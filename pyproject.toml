@@ -5,7 +5,7 @@ description = "Galaxy Morphology Classification using Machine Learning"
 readme = "README.md"
 authors = [
     { name = "Alex Jurado", email = "alexjurado1lopez@gmail.com" },
-    { name = "Elisa Camilleri", email = "Elisa.Camilleri@uab.cat" },
+    { name = "Elisa Camilleri", email = "elisa.camilleri02@gmail.com" },
     { name = "Noah Alberca", email = "noahlbergarci@gmail.com" }
 ]
 requires-python = ">=3.9"
