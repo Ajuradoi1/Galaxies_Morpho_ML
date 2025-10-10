@@ -2,5 +2,5 @@
 .vscode
 ZooSpecPhotoDR19_filtered.csv.gz
 ZooSpecPhotoDR19.csv.gz
-Dataset_combinado.parquet
+Combined_dataset.parquet
 Images_PCA.parquet
